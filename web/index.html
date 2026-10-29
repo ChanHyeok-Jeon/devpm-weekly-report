@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>개발 진행 주간 리포트 AI</title>
+<meta name="description" content="이슈 데이터에서 진척률·지연·막힌 작업은 코드가 집계하고, AI가 주간 리포트를 쓰고, 코드가 다시 검증합니다.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{--a:61,214,195;--accent:rgb(var(--a));--on:#06201D;--bg:#0A0A0A;--c1:#141414;--c2:#1C1C1C;--line:rgba(255,255,255,.08);--t2:rgba(255,255,255,.65);--t3:rgba(255,255,255,.42);--warn:#F2A65A;--bad:#F06A6A}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Pretendard',sans-serif;background:var(--bg);color:#fff;line-height:1.6;word-break:keep-all;-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.top{padding:2.2rem 0 1.4rem;border-bottom:1px solid var(--line)}
+.back{font-size:13px;color:var(--t3);text-decoration:none}
+h1{font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-.03em;margin:.5rem 0 .4rem}
+.top p{color:var(--t2);font-size:15px;max-width:760px}
+.flow{display:flex;flex-wrap:wrap;gap:6px;margin-top:.9rem;font-size:12.5px}
+.flow span{border:1px solid var(--line);padding:4px 10px;border-radius:20px;color:var(--t2)}
+.flow span.ai{background:rgba(var(--a),.14);border-color:rgba(var(--a),.4);color:var(--accent)}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:1.4rem 0;padding:1rem;background:var(--c1);border:1px solid var(--line);border-radius:12px}
+.bar label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--t3)}
+.bar input{font:inherit;font-size:14px;background:var(--c2);border:1px solid var(--line);color:#fff;border-radius:8px;padding:.5rem .6rem;color-scheme:dark}
+.bar .file{flex:1;min-width:220px}
+.btn{font:inherit;font-size:14px;font-weight:700;border:none;border-radius:8px;padding:.65rem 1.1rem;cursor:pointer;background:var(--accent);color:var(--on)}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--t2);font-weight:600}
+.btn:disabled{opacity:.5;cursor:wait}
+.note{font-size:12px;color:var(--t3);margin:-.6rem 0 1.2rem}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kpi{background:var(--c1);border:1px solid var(--line);border-radius:12px;padding:.9rem 1rem}
+.kpi small{display:block;font-size:12px;color:var(--t3)}
+.kpi b{display:block;font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.3}
+.kpi span{font-size:12px;color:var(--t2)}
+.kpi.warn b{color:var(--warn)}.kpi.bad b{color:var(--bad)}.kpi.good b{color:var(--accent)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.card{background:var(--c1);border:1px solid var(--line);border-radius:12px;padding:1.1rem 1.2rem}
+.card h3{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.04em;margin-bottom:.7rem}
+.stage{display:grid;grid-template-columns:96px 1fr 52px;gap:10px;align-items:center;font-size:13px;margin-bottom:7px;color:var(--t2)}
+.track{height:8px;border-radius:4px;background:var(--c2);overflow:hidden}
+.track i{display:block;height:100%;background:var(--accent);border-radius:4px}
+.stage em{font-style:normal;text-align:right;font-size:12px;color:var(--t3)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td{padding:.45rem .3rem;border-bottom:1px solid var(--line);color:var(--t2);vertical-align:top}
+td:first-child{white-space:nowrap;font-weight:700;color:#fff;width:76px}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:1px 8px;margin-right:4px}
+.tag.r{background:rgba(240,106,106,.15);color:var(--bad)}.tag.w{background:rgba(242,166,90,.15);color:var(--warn)}.tag.g{background:rgba(var(--a),.15);color:var(--accent)}
+.report{grid-column:span 2}
+.md{font-size:14px;color:var(--t2);line-height:1.8}
+.md h2{font-size:15px;color:#fff;margin:1rem 0 .3rem}.md h2:first-child{margin-top:0}
+.md ul,.md ol{padding-left:1.2rem}.md strong{color:#fff}
+.check{font-size:12.5px;border-radius:8px;padding:.5rem .7rem;margin-bottom:.8rem}
+.check.ok{background:rgba(var(--a),.1);color:var(--accent)}.check.no{background:rgba(242,166,90,.12);color:var(--warn)}
+.tools{display:flex;gap:8px;margin-top:.8rem}
+.empty{color:var(--t3);text-align:center;padding:2.5rem 1rem;font-size:14px}
+.why{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:2rem 0}
+.why div{background:var(--c1);border:1px solid var(--line);border-radius:12px;padding:1rem;font-size:13.5px;color:var(--t2)}
+.why b{display:block;color:#fff;margin-bottom:.3rem}
+footer{font-size:12px;color:var(--t3);padding:1rem 0 2.5rem}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid,.why{grid-template-columns:1fr}.report{grid-column:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="back" href="/">← 전찬혁 포트폴리오</a>
+    <h1>개발 진행 주간 리포트 AI</h1>
+    <p>Jira 이슈 CSV를 넣으면 진척률·지연·막힌 작업·버그는 <strong>코드가 집계</strong>하고, AI가 주간 리포트를 씁니다. AI가 쓴 숫자와 이슈 번호는 <strong>코드가 다시 대조</strong>합니다. PM은 검토만 하고 공유합니다.</p>
+    <div class="flow"><span>이슈 CSV</span><span>코드: 지표 집계</span><span class="ai">AI: 리포트 작성</span><span>코드: 숫자·이슈 번호 검증</span><span>PM: 검토 후 공유</span></div>
+  </div>
+
+  <div class="bar">
+    <label>기준일<input type="date" id="asOf" value="2026-11-06"></label>
+    <label>마일스톤 이름<input id="msName" value="알파 빌드" style="width:120px"></label>
+    <label>마일스톤 날짜<input type="date" id="msDate" value="2026-11-27"></label>
+    <label class="file">이슈 CSV (Jira 내보내기 형식)<input type="file" id="csv" accept=".csv"></label>
+    <button class="btn ghost" id="sampleBtn">시연 데이터로 보기</button>
+    <button class="btn" id="runBtn">리포트 만들기</button>
+  </div>
+  <div class="note">시연 데이터는 가상의 "신규 캐릭터 출시" 프로젝트입니다. <a href="api/sample.csv">시연 CSV 내려받기</a> · 열: key, summary, type, stage, status, assignee, created, start, due, resolved, points, blocked_by, severity, rework</div>
+
+  <div id="out"><div class="empty">"시연 데이터로 보기"를 누르면 대시보드와 AI 주간 리포트가 만들어집니다.</div></div>
+
+  <div class="why">
+    <div><b>숫자는 AI가 만들지 않습니다</b>진척률, 계획 대비 완료율, 연쇄 영향 작업 수, 마일스톤 버퍼는 모두 코드가 계산합니다.</div>
+    <div><b>AI 글은 코드가 대조합니다</b>리포트에 나온 이슈 번호와 숫자가 집계에 없으면 경고를 띄웁니다.</div>
+    <div><b>PM의 시간은 판단에 씁니다</b>집계와 초안을 자동으로 만들고, PM은 리스크 판단과 결정 요청에 집중합니다.</div>
+  </div>
+  <footer>소스: <a href="https://github.com/ChanHyeok-Jeon/devpm-weekly-report" target="_blank" rel="noopener">GitHub</a> · 업로드한 CSV는 저장하지 않습니다.</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function render(m, rep){
+  const p = m.progress, w = m.week_plan, b = m.bugs, buf = m.milestone.buffer_days;
+  const kpi = (cls, label, big, sub) => `<div class="kpi ${cls}"><small>${label}</small><b>${big}</b><span>${sub}</span></div>`;
+  const risks = m.risks.map(r => `<tr><td>${esc(r.key)}</td><td><span class="tag ${r.type.includes('S1') || r.type === '기한 초과' ? 'r' : 'w'}">${esc(r.type)}</span>${esc(r.detail)}${r.impact ? ` · <b style="color:#fff">뒤에서 기다리는 작업 ${r.impact}개</b>` : ''}</td></tr>`).join('');
+  const missed = w.missed.map(t => `<tr><td>${esc(t.key)}</td><td>${esc(t.summary)} · 기한 ${esc(t.due)} · ${esc(t.status)} · ${esc(t.assignee)}</td></tr>`).join('');
+  const reportCard = rep ? `
+    <div class="card report"><h3>AI 주간 리포트</h3>
+      <div class="check ${rep.check.ok ? 'ok' : 'no'}">${rep.check.ok ? '✓ 리포트의 숫자와 이슈 번호가 모두 집계와 일치합니다'
+        : '⚠ 집계에 없는 값이 있습니다 — 이슈: ' + esc(rep.check.unknown_keys.join(', ') || '없음') + ' / 숫자: ' + esc(rep.check.unknown_numbers.join(', ') || '없음') + '. 공유 전에 확인하세요.'}</div>
+      <div class="md" id="md">${marked.parse(rep.markdown)}</div>
+      <div class="tools"><button class="btn ghost" id="copyBtn">마크다운 복사 (Slack·Jira용)</button></div>
+    </div>` : '';
+  $('#out').innerHTML = `
+    <div class="kpis">
+      ${kpi(p.pct >= 50 ? 'good' : '', '전체 진척률', p.pct + '%', `작업 ${p.tasks_done}/${p.tasks_total} · 포인트 ${p.points_pct}%`)}
+      ${kpi(w.pct !== null && w.pct < 70 ? 'warn' : 'good', '이번 주 계획 대비 완료', w.pct === null ? '-' : w.pct + '%', `${w.done}/${w.planned}건 · ${esc(m.week)}`)}
+      ${kpi(m.overdue.length ? 'bad' : 'good', '기한 초과 · 막힘', `${m.overdue.length} · ${m.blocked.length}`, '기한 초과 작업 · 막힌 작업')}
+      ${kpi(b.severity.S1 ? 'bad' : '', '열린 버그', b.open, `S1 ${b.severity.S1} · S2 ${b.severity.S2} · 이번 주 +${b.new_this_week} / -${b.closed_this_week}`)}
+      ${kpi(buf !== null && buf <= 3 ? 'warn' : 'good', esc(m.milestone.name) + ' 버퍼', buf === null ? '-' : buf + '일', esc(m.milestone.date) + ' 기준')}
+    </div>
+    <div class="grid">
+      <div class="card"><h3>단계별 진행</h3>${m.stages.map(s => `<div class="stage"><span>${esc(s.stage)}</span><div class="track"><i style="width:${s.pct}%"></i></div><em>${s.done}/${s.total}</em></div>`).join('')}</div>
+      <div class="card"><h3>리스크 (영향 큰 순)</h3><table>${risks || '<tr><td>-</td><td>없음</td></tr>'}</table></div>
+      <div class="card"><h3>이번 주 기한인데 끝나지 않은 작업</h3><table>${missed || '<tr><td>-</td><td>없음</td></tr>'}</table></div>
+      <div class="card"><h3>재작업·늦게 끝난 작업</h3><table>${m.rework.map(t => `<tr><td>${esc(t.key)}</td><td><span class="tag w">재작업 ${t.rework}회</span>${esc(t.summary)} · ${esc(t.assignee)}</td></tr>`).join('')}${m.late_done.map(t => `<tr><td>${esc(t.key)}</td><td><span class="tag w">${t.late_days}일 늦게 완료</span>${esc(t.summary)}</td></tr>`).join('') || ''}</table></div>
+      ${reportCard}
+    </div>`;
+  if (rep) $('#copyBtn').onclick = async () => { await navigator.clipboard.writeText(rep.markdown); $('#copyBtn').textContent = '복사했습니다'; };
+}
+
+async function run(useSample){
+  const fd = new FormData();
+  fd.append('as_of', $('#asOf').value); fd.append('milestone', $('#msDate').value); fd.append('milestone_name', $('#msName').value);
+  const f = $('#csv').files[0];
+  fd.append('use_sample', useSample || !f ? 'true' : 'false');
+  if (!useSample && f) fd.append('file', f);
+  const btns = [$('#runBtn'), $('#sampleBtn')]; btns.forEach(b => b.disabled = true);
+  $('#runBtn').textContent = '집계하고 리포트 쓰는 중…';
+  try {
+    const res = await fetch('api/analyze', {method:'POST', body: fd});
+    const x = await res.json();
+    if (!res.ok) throw new Error(x.detail || '처리하지 못했습니다.');
+    render(x.metrics, x.report);
+  } catch (e) { $('#out').innerHTML = `<div class="empty" style="color:var(--warn)">${esc(e.message)}</div>`; }
+  btns.forEach(b => b.disabled = false); $('#runBtn').textContent = '리포트 만들기';
+}
+$('#runBtn').onclick = () => run(false);
+$('#sampleBtn').onclick = () => run(true);
+if (location.hash === '#demo') run(true);
+</script>
+</body>
+</html>
